@@ -1,8 +1,8 @@
 mod error;
-mod uploaded_files;
+mod file_metadata;
 
 use crate::error::FileHandlingError;
-use crate::uploaded_files::UploadedFiles;
+use crate::file_metadata::FileMetadatas;
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use actix_web::{
@@ -30,7 +30,7 @@ async fn health() -> impl Responder {
 }
 
 #[get("/files/{fileid}")]
-async fn get_file(db: web::Data<UploadedFiles>, fileid: web::Path<String>) -> Result<NamedFile> {
+async fn get_file(db: web::Data<FileMetadatas>, fileid: web::Path<String>) -> Result<NamedFile> {
     if let Some(metadata) = db.get(&fileid).await? {
         let file = NamedFile::open_async(format!("files/{}", metadata.fileid)).await?;
         return Ok(file
@@ -45,7 +45,7 @@ async fn get_file(db: web::Data<UploadedFiles>, fileid: web::Path<String>) -> Re
 
 #[delete("/files/{fileid}")]
 async fn delete_file(
-    db: web::Data<UploadedFiles>,
+    db: web::Data<FileMetadatas>,
     fileid: web::Path<String>,
 ) -> Result<HttpResponse> {
     if db.delete(&fileid).await? {
@@ -56,13 +56,13 @@ async fn delete_file(
 }
 
 #[get("/files")]
-async fn list_files(db: web::Data<UploadedFiles>) -> Result<HttpResponse> {
+async fn list_files(db: web::Data<FileMetadatas>) -> Result<HttpResponse> {
     let files = db.list().await?;
     Ok(HttpResponse::Ok().json(files).into())
 }
 
 #[post("/files")]
-async fn upload_file(db: web::Data<UploadedFiles>, mut payload: Multipart) -> Result<HttpResponse> {
+async fn upload_file(db: web::Data<FileMetadatas>, mut payload: Multipart) -> Result<HttpResponse> {
     while let Some(mut field) = payload.try_next().await? {
         if field.name() != "data" {
             field.for_each(|_| ready(())).await;
@@ -109,14 +109,14 @@ async fn main() -> std::io::Result<()> {
         .database("video-storage");
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(UploadedFiles::new(db.clone())))
+            .app_data(web::Data::new(FileMetadatas::new(db.clone())))
             .service(
                 web::scope("v1")
                     .service(health)
                     .service(list_files)
                     .service(upload_file)
                     .service(get_file)
-                    .service(delete_file), // .service(upload::get_files),
+                    .service(delete_file),
             )
     })
     .bind(("0.0.0.0", 8080))?

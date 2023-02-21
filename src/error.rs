@@ -11,7 +11,7 @@ pub enum FileHandlingError {
     UnsupportedMediaType,
     FileExists,
     FileNotFound,
-    DatabaseError(crate::uploaded_files::DatabaseError),
+    DatabaseError(crate::file_metadata::DatabaseError),
 }
 
 impl ResponseError for FileHandlingError {
@@ -30,8 +30,8 @@ impl ResponseError for FileHandlingError {
     }
 }
 
-impl From<crate::uploaded_files::DatabaseError> for FileHandlingError {
-    fn from(error: crate::uploaded_files::DatabaseError) -> Self {
+impl From<crate::file_metadata::DatabaseError> for FileHandlingError {
+    fn from(error: crate::file_metadata::DatabaseError) -> Self {
         Self::DatabaseError(error)
     }
 }

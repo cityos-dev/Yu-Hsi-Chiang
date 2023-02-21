@@ -20,13 +20,13 @@ pub enum DatabaseError {
 type Result<T> = std::result::Result<T, DatabaseError>;
 
 #[derive(Clone)]
-pub struct UploadedFiles {
+pub struct FileMetadatas {
     db: Database,
 }
 
-impl UploadedFiles {
+impl FileMetadatas {
     pub fn new(db: Database) -> Self {
-        UploadedFiles { db }
+        FileMetadatas { db }
     }
 
     pub async fn create(self: &Self, name: &String, mime: &Mime) -> Result<Option<String>> {
@@ -58,7 +58,7 @@ impl UploadedFiles {
     }
 
     pub async fn update_size(self: &Self, id: &String, size: usize) -> Result<bool> {
-        let collection: Collection<UploadedFileInternal> = self.db.collection("videos");
+        let collection: Collection<FileMetadataInternal> = self.db.collection("videos");
         Ok(match ObjectId::parse_str(id).ok() {
             Some(object_id) => {
                 collection
@@ -74,8 +74,8 @@ impl UploadedFiles {
         })
     }
 
-    pub async fn get(self: &Self, id: &String) -> Result<Option<UploadedFile>> {
-        let collection: Collection<UploadedFileInternal> = self.db.collection("videos");
+    pub async fn get(self: &Self, id: &String) -> Result<Option<FileMetadata>> {
+        let collection: Collection<FileMetadataInternal> = self.db.collection("videos");
         Ok(match ObjectId::parse_str(id).ok() {
             Some(object_id) => {
                 collection
@@ -87,14 +87,14 @@ impl UploadedFiles {
         })
     }
 
-    pub async fn list(self: &Self) -> Result<Vec<UploadedFile>> {
-        let collection: Collection<UploadedFileInternal> = self.db.collection("videos");
+    pub async fn list(self: &Self) -> Result<Vec<FileMetadata>> {
+        let collection: Collection<FileMetadataInternal> = self.db.collection("videos");
         let cursor = collection.find(None, None).await?;
         Ok(cursor.map_ok(|f| f.into()).try_collect().await?)
     }
 
     pub async fn delete(self: &Self, id: &String) -> Result<bool> {
-        let collection: Collection<UploadedFileInternal> = self.db.collection("videos");
+        let collection: Collection<FileMetadataInternal> = self.db.collection("videos");
         Ok(match ObjectId::parse_str(id).ok() {
             Some(object_id) => {
                 collection
@@ -130,7 +130,7 @@ impl ResponseError for DatabaseError {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct UploadedFileInternal {
+struct FileMetadataInternal {
     #[serde(rename = "_id")]
     id: bson::oid::ObjectId,
     mime: MimeInternal,
@@ -139,7 +139,7 @@ struct UploadedFileInternal {
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub struct UploadedFile {
+pub struct FileMetadata {
     pub fileid: String,
     pub name: String,
     pub size: i64,
@@ -148,9 +148,9 @@ pub struct UploadedFile {
     pub mime: mime::Mime,
 }
 
-impl From<UploadedFileInternal> for UploadedFile {
-    fn from(file: UploadedFileInternal) -> Self {
-        UploadedFile {
+impl From<FileMetadataInternal> for FileMetadata{
+    fn from(file: FileMetadataInternal) -> Self {
+        FileMetadata{
             fileid: file.id.to_hex(),
             name: file.name,
             size: file.size,
